@@ -98,17 +98,27 @@ function render(b,label){
 }
 function timeout(ms){return new Promise(function(_,r){setTimeout(function(){r(new Error('timeout'))},ms)})}
 async function getJSON(u){var r=await Promise.race([fetch(u),timeout(4500)]);if(!r.ok)throw new Error('http');return r.json()}
+var LOCAL=null,localTried=false;
+async function enrich(x){
+  var desc='';
+  try{var w=await getJSON('https://openlibrary.org'+x.key+'.json');desc=typeof w.description==='string'?w.description:(w.description&&w.description.value)||''}catch(e){}
+  desc=desc.replace(/\s+/g,' ').split('----------')[0].trim();
+  if(desc.length>520)desc=desc.slice(0,520).replace(/\s\S*$/,'')+'\u2026';
+  return{title:x.title,author:x.author,year:x.year,desc:desc||'No description available for this edition.',url:'https://openlibrary.org'+x.key,img:x.cover_i?'https://covers.openlibrary.org/b/id/'+x.cover_i+'-L.jpg':''};
+}
+async function fromFile(){
+  if(!localTried){localTried=true;try{var r=await fetch('books.json');if(r.ok)LOCAL=await r.json()}catch(e){}}
+  if(!LOCAL||!LOCAL.length)throw new Error('no file');
+  return enrich(LOCAL[Math.floor(Math.random()*LOCAL.length)]);
+}
 async function live(){
+  try{return await fromFile()}catch(e){}
   var base='https://openlibrary.org/search.json?q='+encodeURIComponent('publisher:"Penguin Classics"')+'&fields=key,title,author_name,first_publish_year,cover_i&limit=1';
   var head=await getJSON(base);
   var n=head.numFound;if(!n)throw new Error('none');
   var d=await getJSON(base+'&offset='+Math.floor(Math.random()*Math.min(n,5000)));
   var x=d.docs[0];if(!x)throw new Error('none');
-  var desc='';
-  try{var w=await getJSON('https://openlibrary.org'+x.key+'.json');desc=typeof w.description==='string'?w.description:(w.description&&w.description.value)||''}catch(e){}
-  desc=desc.replace(/\s+/g,' ').split('----------')[0].trim();
-  if(desc.length>520)desc=desc.slice(0,520).replace(/\s\S*$/,'')+'…';
-  return{title:x.title,author:(x.author_name||['Unknown'])[0],year:x.first_publish_year,desc:desc||'No description available for this edition.',url:'https://openlibrary.org'+x.key,img:x.cover_i?'https://covers.openlibrary.org/b/id/'+x.cover_i+'-L.jpg':''};
+  return enrich({key:x.key,title:x.title,author:(x.author_name||['Unknown'])[0],year:x.first_publish_year,cover_i:x.cover_i});
 }
 function sample(){
   var i;do{i=Math.floor(Math.random()*BOOKS.length)}while(i===last&&BOOKS.length>1);last=i;
@@ -118,7 +128,7 @@ async function next(){
   btn.disabled=true;
   try{
     if(!liveOK)throw new Error('skip');
-    render(await live(),'Drawn live from Open Library\u2019s Penguin Classics catalogue');
+    render(await live(),(LOCAL&&LOCAL.length?'Random pick from '+LOCAL.length+' Penguin Classics titles in books.json':'Drawn live from Open Library\u2019s Penguin Classics catalogue'));
   }catch(e){
     liveOK=false;
     render(sample(),'Random pick from a built-in sample of '+BOOKS.length+' Penguin Classics (live catalogue unavailable here)');
