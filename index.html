@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Random Penguin Classic</title>
+<style>
+:root{--bg:#f4efe4;--fg:#1c1a17;--mut:#6b655b;--acc:#e86a10;--card:#fffaf0;--line:#d9d0bd;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15130f;--fg:#f1ebdd;--mut:#a39b8b;--card:#1f1c17;--line:#3a352c}}
+:root[data-theme="dark"]{--bg:#15130f;--fg:#f1ebdd;--mut:#a39b8b;--card:#1f1c17;--line:#3a352c}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Georgia,"Times New Roman",serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:28px 16px 40px}
+header{text-align:center;margin-bottom:24px}
+header small{display:block;letter-spacing:.2em;text-transform:uppercase;font:600 12px/1 system-ui,sans-serif;color:var(--acc);margin-bottom:8px}
+header h1{margin:0;font-size:clamp(24px,5vw,34px);font-weight:700}
+main{width:100%;max-width:760px}
+.card{display:flex;gap:28px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:24px;flex-wrap:wrap;justify-content:center}
+.coverwrap{width:200px;flex:0 0 200px}
+.coverwrap img,.cover{width:200px;aspect-ratio:2/3;display:block;border-radius:2px;box-shadow:0 6px 18px rgba(0,0,0,.25);object-fit:cover;background:#ddd}
+.cover{background:#f6eedb;color:#1c1a17;display:flex;flex-direction:column;border-top:22px solid var(--acc);border-bottom:22px solid var(--acc);padding:16px 12px;text-align:center;justify-content:space-between}
+.cover b{font-size:18px;line-height:1.2}
+.cover i{font-size:13px}
+.info{flex:1 1 280px;min-width:0}
+.info h2{margin:0 0 4px;font-size:26px;line-height:1.15}
+.author{color:var(--acc);font:600 16px system-ui,sans-serif;margin:0 0 4px}
+.meta{color:var(--mut);font:13px system-ui,sans-serif;margin:0 0 14px}
+.desc{line-height:1.6;margin:0 0 18px}
+.links a{display:inline-block;margin:0 14px 6px 0;color:var(--fg);font:600 14px system-ui,sans-serif;text-decoration:underline;text-decoration-color:var(--acc);text-underline-offset:3px}
+.actions{text-align:center;margin-top:22px}
+button{background:var(--acc);color:#fff;border:0;border-radius:999px;padding:14px 34px;font:700 16px system-ui,sans-serif;cursor:pointer}
+button:hover{filter:brightness(1.08)}button:disabled{opacity:.6;cursor:wait}
+.src{text-align:center;color:var(--mut);font:12px system-ui,sans-serif;margin-top:14px}
+</style>
+</head>
+<body>
+<header><small>Penguin Classics</small><h1>What should you read next?</h1></header>
+<main>
+  <div class="card" id="card" aria-live="polite"></div>
+  <div class="actions"><button id="btn">Show me another book</button></div>
+  <p class="src" id="src"></p>
+</main>
+<script>
+// Curated sample, used when the live Open Library lookup is unavailable.
+var BOOKS=[
+["Pride and Prejudice","Jane Austen",1813,"Elizabeth Bennet and the proud Mr Darcy circle each other through a comedy of manners, money and misjudgement."],
+["Jane Eyre","Charlotte Brontë",1847,"An orphaned governess finds love and a terrible secret at Thornfield Hall, refusing to give up her independence."],
+["Wuthering Heights","Emily Brontë",1847,"Heathcliff and Catherine's destructive passion haunts two families on the Yorkshire moors."],
+["Frankenstein","Mary Shelley",1818,"A young scientist creates life and then abandons his creation, with tragic consequences."],
+["Great Expectations","Charles Dickens",1861,"Pip, a poor orphan, is given a mysterious fortune and learns what it costs."],
+["Middlemarch","George Eliot",1871,"A panoramic portrait of provincial English life, ambition and marriage."],
+["Moby-Dick","Herman Melville",1851,"Captain Ahab's obsessive hunt for the white whale becomes a vast meditation on fate and knowledge."],
+["The Odyssey","Homer",-700,"Odysseus spends ten years struggling to return home from Troy to Ithaca."],
+["The Iliad","Homer",-750,"The wrath of Achilles and the final year of the Trojan War."],
+["Crime and Punishment","Fyodor Dostoevsky",1866,"A destitute student commits murder and is consumed by guilt and fevered rationalisation."],
+["The Brothers Karamazov","Fyodor Dostoevsky",1880,"Three brothers and their despicable father collide in a story of faith, doubt and patricide."],
+["Anna Karenina","Leo Tolstoy",1877,"A married aristocrat's affair unfolds alongside Levin's search for meaning."],
+["War and Peace","Leo Tolstoy",1869,"Five Russian families live through the Napoleonic wars in an epic of history and private life."],
+["Madame Bovary","Gustave Flaubert",1857,"A doctor's wife seeks romance beyond her provincial marriage, with ruinous results."],
+["Les Misérables","Victor Hugo",1862,"Jean Valjean's pursuit of redemption plays out across revolutionary France."],
+["The Count of Monte Cristo","Alexandre Dumas",1844,"Wrongly imprisoned Edmond Dantès escapes and engineers an elaborate revenge."],
+["Don Quixote","Miguel de Cervantes",1605,"A gentleman who reads too many chivalric romances sets out as a knight-errant with his squire Sancho Panza."],
+["The Divine Comedy: Inferno","Dante Alighieri",1320,"Dante descends through the nine circles of Hell guided by the poet Virgil."],
+["The Canterbury Tales","Geoffrey Chaucer",1400,"Pilgrims on the road to Canterbury trade bawdy, pious and funny stories."],
+["Paradise Lost","John Milton",1667,"The epic of Satan's rebellion and the fall of Adam and Eve."],
+["Gulliver's Travels","Jonathan Swift",1726,"A ship's surgeon visits strange lands and delivers savage satire on human nature."],
+["Tess of the d'Urbervilles","Thomas Hardy",1891,"A young woman's life is shaped and ruined by class, chance and a cruel moral code."],
+["Heart of Darkness","Joseph Conrad",1899,"Marlow travels up the Congo to find the enigmatic Kurtz."],
+["The Picture of Dorian Gray","Oscar Wilde",1890,"A beautiful young man stays unchanged while his portrait records his corruption."],
+["Dracula","Bram Stoker",1897,"Count Dracula travels from Transylvania to England, pursued by a band of determined hunters."],
+["The Metamorphosis","Franz Kafka",1915,"Gregor Samsa wakes to find himself transformed into an enormous insect."],
+["The Trial","Franz Kafka",1925,"Josef K. is arrested and prosecuted by an inaccessible authority for an unnamed crime."],
+["Notes from Underground","Fyodor Dostoevsky",1864,"A bitter, self-lacerating narrator rails against reason, society and himself."],
+["Dead Souls","Nikolai Gogol",1842,"The swindler Chichikov travels Russia buying up the names of dead serfs."],
+["Fathers and Sons","Ivan Turgenev",1862,"The nihilist Bazarov clashes with the older generation in provincial Russia."],
+["Candide","Voltaire",1759,"A naive young man is battered through a series of disasters despite being told this is the best of all possible worlds."],
+["Dangerous Liaisons","Pierre Choderlos de Laclos",1782,"Two aristocrats play seduction as a game of power in a novel told through letters."],
+["The Sorrows of Young Werther","Johann Wolfgang von Goethe",1774,"A sensitive young man's unrequited love ends in tragedy."],
+["Walden","Henry David Thoreau",1854,"Thoreau's account of living simply in a cabin beside Walden Pond."],
+["The Scarlet Letter","Nathaniel Hawthorne",1850,"Hester Prynne is publicly shamed in Puritan Boston for adultery."],
+["Leaves of Grass","Walt Whitman",1855,"Whitman's expansive, free-verse celebration of the self and democratic America."],
+["The Death of Ivan Ilyich","Leo Tolstoy",1886,"A comfortable judge confronts the emptiness of his life as he faces death."],
+["Beowulf","Anonymous",1000,"The hero Beowulf fights Grendel, Grendel's mother and, finally, a dragon."]
+];
+var card=document.getElementById('card'),btn=document.getElementById('btn'),srcEl=document.getElementById('src');
+var last=-1,liveOK=true;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function yr(y){return y<0?Math.abs(y)+' BCE (approx.)':(y&&y<1000?'c. '+y:y)}
+function coverHTML(t,a){return '<div class="cover"><b>'+esc(t)+'</b><i>'+esc(a)+'</i></div>'}
+function render(b,label){
+  var q=encodeURIComponent(b.title+' '+b.author);
+  var cover=b.img?'<img src="'+esc(b.img)+'" alt="Cover of '+esc(b.title)+'" onerror="this.outerHTML=window.__c">':coverHTML(b.title,b.author);
+  window.__c=coverHTML(b.title,b.author);
+  var links='<a href="https://www.penguinrandomhouse.com/search/site?q='+q+'%20penguin%20classics" target="_blank" rel="noopener">Find at Penguin &rarr;</a>'+
+    '<a href="'+esc(b.url||('https://openlibrary.org/search?q='+q))+'" target="_blank" rel="noopener">Open Library &rarr;</a>';
+  card.innerHTML='<div class="coverwrap">'+cover+'</div><div class="info"><h2>'+esc(b.title)+'</h2><p class="author">'+esc(b.author)+'</p><p class="meta">Penguin Classics'+(b.year?' &middot; First published '+yr(b.year):'')+'</p><p class="desc">'+esc(b.desc)+'</p><div class="links">'+links+'</div></div>';
+  srcEl.textContent=label;
+}
+function timeout(ms){return new Promise(function(_,r){setTimeout(function(){r(new Error('timeout'))},ms)})}
+async function getJSON(u){var r=await Promise.race([fetch(u),timeout(4500)]);if(!r.ok)throw new Error('http');return r.json()}
+async function live(){
+  var base='https://openlibrary.org/search.json?q='+encodeURIComponent('publisher:"Penguin Classics"')+'&fields=key,title,author_name,first_publish_year,cover_i&limit=1';
+  var head=await getJSON(base);
+  var n=head.numFound;if(!n)throw new Error('none');
+  var d=await getJSON(base+'&offset='+Math.floor(Math.random()*Math.min(n,5000)));
+  var x=d.docs[0];if(!x)throw new Error('none');
+  var desc='';
+  try{var w=await getJSON('https://openlibrary.org'+x.key+'.json');desc=typeof w.description==='string'?w.description:(w.description&&w.description.value)||''}catch(e){}
+  desc=desc.replace(/\s+/g,' ').split('----------')[0].trim();
+  if(desc.length>520)desc=desc.slice(0,520).replace(/\s\S*$/,'')+'…';
+  return{title:x.title,author:(x.author_name||['Unknown'])[0],year:x.first_publish_year,desc:desc||'No description available for this edition.',url:'https://openlibrary.org'+x.key,img:x.cover_i?'https://covers.openlibrary.org/b/id/'+x.cover_i+'-L.jpg':''};
+}
+function sample(){
+  var i;do{i=Math.floor(Math.random()*BOOKS.length)}while(i===last&&BOOKS.length>1);last=i;
+  var b=BOOKS[i];return{title:b[0],author:b[1],year:b[2],desc:b[3]};
+}
+async function next(){
+  btn.disabled=true;
+  try{
+    if(!liveOK)throw new Error('skip');
+    render(await live(),'Drawn live from Open Library\u2019s Penguin Classics catalogue');
+  }catch(e){
+    liveOK=false;
+    render(sample(),'Random pick from a built-in sample of '+BOOKS.length+' Penguin Classics (live catalogue unavailable here)');
+  }
+  btn.disabled=false;
+}
+btn.addEventListener('click',next);
+next();
+</script>
+</body>
+</html>
